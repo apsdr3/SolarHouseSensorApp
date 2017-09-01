@@ -214,7 +214,7 @@ public class GUI {
 			}
 	        String answer = null;
 			try {
-				answer = input..readLine();
+				answer = input.readLine();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
