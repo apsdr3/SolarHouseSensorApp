@@ -9,7 +9,7 @@ import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener; 
 import java.util.Enumeration;
 
-public class SerialTest implements SerialPortEventListener {
+public class SerialConnection implements SerialPortEventListener {
     SerialPort serialPort;
     /** The port we're normally going to use. */
     private String PORT_NAMES[] = { 
@@ -34,7 +34,7 @@ public class SerialTest implements SerialPortEventListener {
     /** Default bits per second for COM port. */
     private static final int DATA_RATE = 9600;
 
-    public SerialTest(String portName, String port) {
+    public SerialConnection(String portName, String port) {
         //uncomment this for the rasberry pi
         //System.setProperty("gnu.io.rxtx.SerialPorts", port);
 
@@ -44,7 +44,7 @@ public class SerialTest implements SerialPortEventListener {
         PortName = portName;
     }
 
-    public SerialTest() {
+    public SerialConnection() {
         //uncomment this for the rasberry pi
         //System.setProperty("gnu.io.rxtx.SerialPorts", "/dev/ttyACM0");
 
@@ -117,7 +117,7 @@ public class SerialTest implements SerialPortEventListener {
                 System.out.println("read data from " + PortName + ": " + inputLine + "; now sending to server...");
 
                 //send the data to the server.
-                SolarHouse.SendDataToServer(inputLine);
+                //SolarHouse.SendDataToServer(inputLine);
                 System.out.println("Successfully sent the data.");
             } catch (Exception e) {
                 System.err.println(e.toString());

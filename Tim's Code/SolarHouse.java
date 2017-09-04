@@ -5,19 +5,20 @@ import java.net.*;
 
 public class SolarHouse {
     
-    public static final int SERVER_PORT = 9090;
-    public static final String SERVER_IP = "127.0.0.1";
+    public static final String SERVER_URL = "http://192.168.2.9:9090/postRequest/";
 
     public static void main(String[] args) throws IOException {
-        ServerSocket listener = new ServerSocket(9091);
-        //energy c02 humidity
-        SerialTest TemperatureConnection = new SerialTest("TemperatureConnection", "COM5");
-        SerialTest C02Connection = new SerialTest("C02Connection","COM6");
-        SerialTest HumidityConnection = new SerialTest("HumidityConnection","COM7");
-	TemperatureConnection.initialize();
-        C02Connection.initialize();
-        HumidityConnection.initialize();
+        //ServerSocket listener = new ServerSocket(9091);
         
+        //SerialConnection TemperatureConnection = new SerialConnection("TemperatureConnection", "COM5");
+        //SerialConnection C02Connection = new SerialConnection("C02Connection","COM6");
+        //SerialConnection HumidityConnection = new SerialConnection("HumidityConnection","COM7");
+	//TemperatureConnection.initialize();
+        //C02Connection.initialize();
+        //HumidityConnection.initialize();
+        
+        SendDataToServer("temperature=", 50);
+        /*
         try {
             while (true) {
                 Socket socket = listener.accept();
@@ -45,33 +46,35 @@ public class SolarHouse {
         }
         finally {
             listener.close();
-        }
+        }*/
     }
  
-    public static void SendDataToServer(String sendString) {       
+    public static void SendDataToServer(String sendString, int value) {       
         try {
-            ServerSocket serverSocket = new ServerSocket();
+            String type = "application/x-www-form-urlencoded";
+            String valueString = Integer.toString(value);
+            String encodedData = URLEncoder.encode( valueString, "UTF-8" );
+            String stringToSend = sendString + encodedData;
+            URL u = new URL(SERVER_URL);
+            HttpURLConnection conn = (HttpURLConnection) u.openConnection();
+            conn.setDoOutput(true);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty( "Content-Type", type );
+            conn.setRequestProperty( "Content-Length", String.valueOf(stringToSend.length()));
+            OutputStream os = conn.getOutputStream();
+            os.write(stringToSend.getBytes());
+            System.out.println(os);
+            System.out.println(conn.getResponseCode());
+            System.out.println(conn.getResponseMessage());
+            System.out.println(conn.getContentType());
             
-            //InetSocketAddress addr = new InetSocketAddress("localhost", 8001);
-            //serverSocket.bind(addr);
-            InetAddress ip = InetAddress.getByName(SERVER_IP);
-            InetSocketAddress addr = new InetSocketAddress(ip, SERVER_PORT);
-            serverSocket.bind(addr);
+            BufferedReader br = new BufferedReader(new InputStreamReader(u.openStream()));
+            String strTemp = "";
+            while (null != (strTemp = br.readLine())) {
+                    System.out.println(strTemp);
+            }
             
-            System.out.println("Attempting to communicate with server...");
-            
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("Established Connection... ");
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-            //BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            //in.readLine()
-            //does this wait for the server to respond or not?
-            
-            System.out.println("Sending data to server...");
-            out.println(sendString);
-            
-            //in.close();
-            out.close();
+            System.out.println("Sent: " + stringToSend);
         } catch (Exception e) {
             System.out.println("Failed to send data to the server. Error: " + e.getMessage());
         }
