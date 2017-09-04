@@ -6,55 +6,35 @@ def index(request):
 	return HttpResponse("BASE WEBSITE")
 
 def getRequest(request):
-	return HttpResponse("YOU GOT INTO TEST")
+	return HttpResponse("YOU GOT INTO GET REQEUST")
 
 def postRequest(request):
-	return HttpResponse("YOU GOT INTO TEST_POST")
+	HttpResponse("YOU GOT INTO POST REQUEST")
+	temperature = 0
+	humidity = 0
+	co2 = 0
+	energy = 0
 
-#scripts to run before running server:
-# python manage.py migrate
-# python manage.py runserver <IPv4 Address>:9090
-
-
-
-
-"""
-def index(request):
-	HttpResponse("Hello, world. You're at the polls index.")
-	time.sleep(1)
-
-	s = socket.socket()
-	s.bind(("192.168.2.35", 9090))
-
-	s.listen(2)
-	c, addr = s.accept()     # Establish connection with client.
+	time.sleep(2)
 	
-	time.sleep(1)
-	HttpResponse("GOT CONNECTION")
+	temperature = request.POST.get('temperature')
+	if temperature != 0:
+		temperatureFunction(temperature)
+		return HttpResponse('Temperature has been stored')
+
+	humidity = request.POST.get('humidity')
+	if humidity != 0:
+		temperatureFunction(humidity)
+		return HttpResponse('Humidity has been stored')	
 	
-	#print('Got connection from', addr)
-	message = '99'
-	c.send(message.encode(encoding='utf-8'))
-	c.close()                # Close the connection
+	co2 = request.POST.get('co2')
+	if co2 != 0:
+		temperatureFunction(co2)
+		return HttpResponse('CO2 has been stored')
 
-	time.sleep(1)
-	return HttpResponse("DONE")
-"""
+	energy = request.POST.get('energy')
+	if energy != 0:
+		temperatureFunction(energy)
+		return HttpResponse('Energy has been stored')
 
-"""
-import socket               # Import socket module
-
-s = socket.socket()         # Create a socket object
-host = '127.0.0.1'          # Get local machine name
-port = 9090                # Reserve a port for your service.
-s.bind((host, port))        # Bind to the port
-
-s.listen(5)                 # Now wait for client connection.
-while True:
-	c, addr = s.accept()     # Establish connection with client.
-	print('Got connection from', addr)
-	message = '99'
-	c.send(message.encode(encoding='utf-8'))
-	c.close()                # Close the connection
-	exit()                 #one connection to test
-"""
+	return HttpResponse('No data has been stored')
