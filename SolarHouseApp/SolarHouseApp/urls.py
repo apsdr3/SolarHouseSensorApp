@@ -20,6 +20,9 @@ from . import views
 
 urlpatterns = [
     url(r'^$', views.index, name='index'),
-    url(r'^getRequest/$', views.getRequest, name='getRequest'),
+    url(r'^getRequestTemperature/$', views.getRequestTemperature, name='getRequestTemperature'),
+    url(r'^getRequestCO2/$', views.getRequestCO2, name='getRequestCO2'),
+    url(r'^getRequestHumidity/$', views.getRequestHumidity, name='getRequestHumidity'),
+    url(r'^getRequestEnergy/$', views.getRequestEnergy, name='getRequestEnergy'),
     url(r'^postRequest/$', views.postRequest, name='postRequest')
 ]
