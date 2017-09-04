@@ -1,32 +1,37 @@
-package SolarHouseApp;
+package SHA;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.Socket;
-import java.net.URLEncoder;
-import java.net.UnknownHostException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
+import java.util.List;
 import java.util.Queue;
 import java.util.Random;
 
+import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
@@ -84,36 +89,19 @@ public class GUI {
 	}
 	
 	public static void main(String[] args) {
-        Socket s = null;
-        boolean connected = true;
-		try {
-			s = new Socket("192.168.2.35", 9090);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			connected = false;
-		} catch (IOException e) {
-			e.printStackTrace();
-			connected = false;
-		}
-		
-		System.out.println(connected);
-		
 		JFrame jf = new JFrame("S&T Solar House App");
 		jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		new GUI(jf, connected, s);
+		new GUI(jf);
 		jf.setVisible(true);
 		jf.setResizable(false);
 		jf.pack();
 	}
 	
-	public GUI(JFrame jf, boolean c, Socket s) {
-		initDisplay(jf, c);
-		//waitForData(s);
+	public GUI(JFrame jf) {
+		initDisplay(jf);
 	}
 	
-	private void initDisplay(JFrame jf, boolean connected) {
-		if(!connected) populateTestQueue();
-		
+	private void initDisplay(JFrame jf) {
 		storedData.add(new LinkedList<>());
 		storedData.add(new LinkedList<>());
 		storedData.add(new LinkedList<>());
@@ -193,63 +181,107 @@ public class GUI {
         		new DrawGraph(panel, this, i, kMaxDatapoints, names[i]);
         }
         jf.add(panel, BorderLayout.EAST);
+        
+        //populateTestQueue();
+		waitForData();
 	}
 	
-	@SuppressWarnings("null")
-	private void waitForData(Socket s) {
+	private void waitForData() {
 		double[] newData = new double[kNumLabels];
-		Map<String, Integer> TypeToInt = null;
+		HashMap<String, Integer> TypeToInt = new HashMap<String, Integer>();
 		TypeToInt.put("temperature",0);
 		TypeToInt.put("humidity",1);
 		TypeToInt.put("co2",2);
 		TypeToInt.put("energy",3);
+		HashMap<Integer, String> IntToType = new HashMap<Integer, String>();
+		IntToType.put(0,"Temperature");
+		IntToType.put(1,"Humidity");
+		IntToType.put(2,"CO2");
+		IntToType.put(3,"Energy");
 		
-		while(true) {
-
-	        BufferedReader input = null;
-			try {
-				input = new BufferedReader(new InputStreamReader(s.getInputStream()));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-	        String answer = null;
-			try {
-				answer = input.readLine();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		Timer dataTimer = new Timer(200, new ActionListener() {
 			
-			//String s2 = new String(input, "UTF-8");
-			
-			String[] data = answer.split(":");
-			int i = TypeToInt.get(data[0]);
-	        
-			//read new data
-			newData[i] = Double.parseDouble(data[1]);
-			//read average data
-			for(int j = 2; j < 5; j++) {
-				int intData = (int) ((Double.parseDouble(data[j])*10)+.5);
-				double setData = ((double) intData)/10;
-				averageData[i][j] = setData;
+			public void actionPerformed(ActionEvent e) {
+				for (int type = 0; type < kNumLabels; type++) {
+					URL url = null;
+					try {
+						url = new URL("http://192.168.2.9:9090/getRequest" + IntToType.get(type) + "/");
+					} catch (MalformedURLException murle) {
+						murle.printStackTrace();
+					}
+					URLConnection conn = null;
+				    try {
+						conn = url.openConnection();
+						System.out.println("Connection Successful");
+					} catch (IOException ioe) {
+						ioe.printStackTrace();
+					}
+					StringBuilder result = new StringBuilder();
+					BufferedReader rd = null;
+					try {
+						rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+					}
+				    String line;
+				    try {
+						while ((line = rd.readLine()) != null) {
+						   result.append(line);
+						}
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				    try {
+						rd.close();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				    String answer = result.toString();
+				    System.out.println(answer);
+					
+					//String s2 = new String(input, "UTF-8");
+					
+					String[] data = answer.split(":");
+					int i = TypeToInt.get(data[0]);
+					
+					for(int k = 0; k < 5; k++) {
+						System.out.println(data[k]);
+					}
+			        
+					//read new data
+					newData[i] = Double.parseDouble(data[1]);
+					//read average data
+					for(int j = 0; j < 3; j++) {
+						int intData = (int) ((Double.parseDouble(data[j+2])*10)+.5);
+						double setData = ((double) intData)/10;
+						averageData[i][j] = setData;
+					}
+					
+					//clear extra members of storedData
+					while (storedData.get(i).size() > 20) {
+						storedData.get(i).remove();
+					}
+					//round to 1 sig fig
+					int intData = (int) ((newData[i]*10)+.5);
+					double setData = ((double) intData)/10;
+		    		    dataLabels[i].setText("" + setData);
+		    		    dataLabels[i].setForeground(sendTLCcolor(Double.parseDouble(dataLabels[i].getText()),i));
+					averageLabels[i].setText(" Day: " + averageData[i][0] + ", Week: " + averageData[i][1] + ", Month: " + averageData[i][2]);
+					storedData.get(i).add(newData[i]);
+					try {
+						Thread.sleep(2000);
+					} catch (InterruptedException ie) {
+						ie.printStackTrace();
+					}
+				}
 			}
-			
-			//clear extra members of storedData
-			while (storedData.get(i).size() > 20) {
-				storedData.get(i).remove();
-			}
-			//round to 1 sig fig
-			int intData = (int) ((newData[i]*10)+.5);
-			double setData = ((double) intData)/10;
-    		    dataLabels[i].setText("" + setData);
-    		    dataLabels[i].setForeground(sendTLCcolor(Double.parseDouble(dataLabels[i].getText()),i));
-			averageLabels[i].setText(" Day: " + averageData[i][0] + ", Week: " + averageData[i][1] + ", Month: " + averageData[i][2]);
-			storedData.get(i).add(newData[i]);
-			try {
-				Thread.sleep(2000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
+		});
+		dataTimer.setRepeats(true);
+		dataTimer.setCoalesce(true);
+		dataTimer.start();
 	}
 	
 	public double sendArray(int i, int dataType){
@@ -273,5 +305,171 @@ public class GUI {
 		if (testValue <= thresholds[dataType][THRESHOLD_YELLOW_HIGH]) return Color.green;
 		if (testValue <= thresholds[dataType][THRESHOLD_RED_HIGH]) return Color.yellow;
 		return Color.red;
+	}
+}
+
+//@SuppressWarnings("serial")
+class DrawGraph extends JPanel implements ActionListener {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private static final int PREF_W = 375, PREF_H = 172;
+	private static final int BORDER_GAP = 25;
+	private static final Color GRAPH_COLOR = Color.blue;
+	private static final Stroke GRAPH_STROKE = new BasicStroke(1.5f);
+	private static final int GRAPH_POINT_WIDTH = 6;
+	private static final int Y_HATCH_CNT = 9;
+//	private Vector<Double> scores;
+//	static Point p;
+	//public static JPanel mainPanel;
+	private JFrame frame;
+	private int dataType;
+	private GUI gui;
+	private int numPts;
+	private String name;
+
+	public DrawGraph(GUI uiout, Point p, int dt, int pointsToPlot, String title) {
+		dataType = dt;
+		gui = uiout;
+		numPts = pointsToPlot;
+		// Start the Graph
+		frame = new JFrame(title);
+		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		frame.getContentPane().add(this);
+		frame.setResizable(false);
+		frame.pack();
+		frame.setLocation(p);
+		frame.setVisible(true);
+	}
+	
+	public DrawGraph(JPanel panel, GUI uiout, int dt, int pointsToPlot, String title) {
+		dataType = dt;
+		gui = uiout;
+		numPts = pointsToPlot;
+		this.setBorder(BorderFactory.createLineBorder(Color.black));
+		this.setBackground(Color.darkGray.brighter().brighter().brighter());
+		panel.add(this);
+		name = title;
+	}
+	
+	public static String[] AXES_TEMPERATURE = {"74", "71", "68"};
+	public static String[] AXES_HUMIDITY = {"60", "47.5", "35"};
+	public static String[] AXES_CO2 = {"1000", "500", "0"};
+	public static String[] AXES_ENERGY = {"1000", "500", "0"};
+	public static double UNIT_TEMPERATURE = 15;
+	public static double UNIT_HUMIDITY = 3.6;
+	public static double UNIT_CO2 = .091;
+	public static double UNIT_ENERGY = .091;
+	
+	public void startTimer() {
+		Timer timer = new Timer(500, new ActionListener() {
+			
+			public void actionPerformed(ActionEvent e) {
+				repaint();
+			}
+		});
+		timer.setRepeats(true);
+		timer.setCoalesce(true);
+		timer.start();
+	}
+
+	
+	@Override
+	protected void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		Graphics2D g2 = (Graphics2D)g;
+		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		setLayout(null);
+
+		List<Point> graphPoints = new ArrayList<Point>();
+		double offset=0, unit=1;
+		int bottom = 0;
+		String[] axes = AXES_TEMPERATURE;
+		if(dataType == 0) {
+			unit = UNIT_TEMPERATURE;
+			axes = AXES_TEMPERATURE;
+			offset = 1080;
+		} else if(dataType == 1) {
+			unit = UNIT_HUMIDITY;
+			axes = AXES_HUMIDITY;
+			offset = 185;
+		} else if (dataType == 2){
+			unit = UNIT_CO2;
+			axes = AXES_CO2;
+			offset = 59;
+			bottom = 45;
+		} else if (dataType == 3){
+			unit = UNIT_ENERGY;
+			axes = AXES_ENERGY;
+			offset = 59;
+			bottom = 45;
+		}
+
+		for(int i=numPts-1;i>=0;i--){
+			int y1 = (int) (((double) getHeight())-gui.sendArray(i, dataType)*unit-100+offset);
+			int x1 = i*15 + BORDER_GAP;
+			graphPoints.add(new Point(x1, y1));
+		}
+		// create x and y axes 
+		g2.drawLine(BORDER_GAP+25, getHeight()/2 + 60, BORDER_GAP+25, getHeight()/2 - 60);
+		g2.drawLine(BORDER_GAP+25, getHeight()/2 + bottom, 
+				getWidth()/2 +148, getHeight()/2 + bottom);
+
+		g2.drawString(axes[0],8,getHeight()/2-40);
+		g2.drawString(axes[1],8,getHeight()/2+4);
+		g2.drawString(axes[2],8,getHeight()/2+48);
+		g2.drawString(name, getWidth()/2-180, 20);
+		g2.drawString("Time (hrs)", getWidth()/2-25, getHeight()-10);
+
+		// create hatch marks for y axis. 
+		for (int i = 0; i < Y_HATCH_CNT; i++) {
+			int x0 = BORDER_GAP+18;
+			int x1 = x0+14;
+			int y0 = 15*i + getHeight()/2 - 60;
+			int y1 = y0;
+			g2.drawLine(x0, y0, x1, y1);
+		}
+
+		// and for x axis
+		for (int i = 1; i < numPts; i++) {
+			int x0 = 15*i + getWidth() - getWidth() + 50;
+			int x1 = x0;
+			int y0 = getHeight()/2+ bottom+7;
+			int y1 = y0 - 14;
+			g2.drawLine(x0, y0, x1, y1);
+		}
+
+		Stroke oldStroke = g2.getStroke();
+		g2.setColor(GRAPH_COLOR);
+		g2.setStroke(GRAPH_STROKE);
+		for (int i = 0; i < graphPoints.size() - 1; i++) {
+			int x1 = graphPoints.get(i).x+25;
+			int y1 = graphPoints.get(i).y;
+			int x2 = graphPoints.get(i + 1).x+25;
+			int y2 = graphPoints.get(i + 1).y;
+			g2.drawLine(x1, y1, x2, y2);         
+		}
+
+		g2.setStroke(oldStroke);      
+
+		for (int i = 0; i < graphPoints.size(); i++) {
+			int x = i*15 + BORDER_GAP - (GRAPH_POINT_WIDTH/2) +(1/2)+25;
+			int y = (int) (((double)getHeight())-gui.sendArray(i, dataType)*unit
+					-100+offset-((double)GRAPH_POINT_WIDTH)/2);
+			int ovalW = GRAPH_POINT_WIDTH;
+			int ovalH = GRAPH_POINT_WIDTH;
+			g2.setColor(gui.sendTLCcolor(gui.sendArray(i, dataType), dataType));
+			g2.fillOval(x, y, ovalW, ovalH);
+		}
+		startTimer();
+	}
+
+	@Override
+	public Dimension getPreferredSize() {
+		return new Dimension(PREF_W, PREF_H);
+	}
+	public void actionPerformed(ActionEvent arg0) {
+		repaint();		
 	}
 }
