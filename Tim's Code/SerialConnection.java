@@ -117,8 +117,8 @@ public class SerialConnection implements SerialPortEventListener {
                 System.out.println("read data from " + PortName + ": " + inputLine + "; now sending to server...");
 
                 //send the data to the server.
-                //SolarHouse.SendDataToServer(inputLine);
-                System.out.println("Successfully sent the data.");
+                SolarHouse.SendDataToServer(inputLine);
+                //System.out.println("Successfully sent the data.");
             } catch (Exception e) {
                 System.err.println(e.toString());
             }
