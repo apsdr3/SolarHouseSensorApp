@@ -9,132 +9,73 @@ def index(request):
 	return HttpResponse("BASE WEBSITE")
 
 def getRequestTemperature(request):
-	# DB query
-	# Set up data for the get request
-	# Send data
-	#return HttpResponse("humidity:11:0:0:0")
-	return HttpResponse(queryDatabase("temperature"))
+	variableQuery = queryDatabase("temperature")
+	variableQuery = fixMessage(variableQuery)
+	return HttpResponse(variableQuery)
 
 def getRequestHumidity(request):
-	return HttpResponse(queryDatabase("humidity"))
+	variableQuery = queryDatabase("humidity")
+	variableQuery = fixMessage(variableQuery)
+	return HttpResponse(variableQuery)
 
 def getRequestCO2(request):
-	return HttpResponse(queryDatabase("co2"))
+	variableQuery = queryDatabase("co2")
+	variableQuery = fixMessage(variableQuery)
+	return HttpResponse(variableQuery)
 
 def getRequestEnergy(request):
-	return HttpResponse(queryDatabase("energy"))
+	variableQuery = queryDatabase("energy")
+	variableQuery = fixMessage(variableQuery)
+	return HttpResponse(variableQuery)
 
-@csrf_exempt
 def postRequest(request):
-	"""
-	time.sleep(2)
-	reqString = request.readline()
-	reqStringSplit = reqString.split(':')
+	variable = request.body.decode('utf-8')
+	variable = variable.split("=")
+	if request.method == 'POST':
+		variableString = variable[0]
+		variableInt = float(variable[1])
+		storeMessage(variableString, variableInt)
 
-	value = int(reqStringSplit[1])
-	
+	return HttpResponse('HI DICK')
 
-	return HttpResponse('Data is received')
-	"""
+def fixMessage(variableQuery):
+	variableQuery = variableQuery.split("[")
+	variableQuery = "".join(variableQuery)
+	variableQuery = variableQuery.split("]")
+	variableQuery = "".join(variableQuery)
+	variableQuery = variableQuery.split("(")
+	variableQuery = "".join(variableQuery)
+	variableQuery = variableQuery.split(")")
+	variableQuery = "".join(variableQuery)
+	variableQuery = variableQuery.split(",")
+	variableQuery = "".join(variableQuery)
+	print(variableQuery)
+	return variableQuery
 
-	time.sleep(2)
-	#return HttpResponse("YOU GOT INTO POST REQUEST")
-
-	#HttpResponse("YOU GOT INTO POST REQUEST")
-	
-	#temperature = 0
-	#humidity = 0
-	#co2 = 0
-	#energy = 0
-
-	time.sleep(2)
-	
-	temperature = request.POST.get('temperature')
-
-	if isinstance(temperature, str):
-		#temperatureFunction(temperature)
-		return HttpResponse('Temperature has been stored ' + str(temperature))
-	"""
-	humidity = request.POST.get('humidity')
-	if humidity != 0:
-		#humidityFunction(humidity)
-		return HttpResponse('Humidity has been stored')	
-	
-	co2 = request.POST.get('co2')
-	if co2 != 0:
-		#co2Function(co2)
-		return HttpResponse('CO2 has been stored')
-	energy = request.POST.get('energy')
-	if energy != 0:
-		#energyFunction(energy)
-		return HttpResponse('Energy has been stored')
-	
-	time.sleep(2)
-	"""
-	return HttpResponse('No data has been stored ' + str(temperature))
-
-
-
-
-
-#----------------------------------------------------------------------
-
-
-# not working
-
-"""
-def createDatabases():
-	# I think this is necessary
-	connection = sqlite3.connect("SILO.db") # this can be name something else
-
-
-	CREATE TABLE 
-	IF NOT EXISTS Temperature ( 
-		datetime DATETIME, 
-		temperature INT NOT NULL);
-
-	CREATE TABLE
-	IF NOT EXISTS Humidity (
-		datetime DATETIME,
-		humidity INT NOT NULL);
-
-	CREATE TABLE
-	IF NOT EXISTS CO2 (
-		datetime DATETIME,
-		co2 INT NOT NULL);
-
-	CREATE TABLE
-	IF NOT EXISTS Energy (
-		datetime DATETIME,
-		energy INT NOT NULL);
-"""
-
-"""
-def storeMessage():
-	connection = sqlite3.connect("Users\hedce\Desktop\SolarHouse\Python\Django\SolarHouseSensorApp\SolarHouseApp\sqlite\silo.db")
+def storeMessage(data_type, givenData):
+	connection = sqlite3.connect("silo.db")
 	cursor = connection.cursor()
-	a = datetime.datetime.strptime('my date', "%b %d %Y %H:%M")
 
 
-	if (string[0:1].lower() == "t"):
-		sql_command = 'INSERT INTO Temperature (datetime, temperature) VALUES (%s, givenTemperature)', (a.strftime('%Y-%m-%d %H:%M:%S'));
+	if (data_type[0:1].lower() == "t"):
+		sql_command = 'INSERT INTO Temperature (datetime, temperature) VALUES (CURRENT_TIMESTAMP, ' + str(givenData) + ');'
 		cursor.execute(sql_command)
 
-	if (string[0:1].lower() == "h"):
-		sql_command = 'INSERT INTO Humidity (datetime, humidity) VALUES (%s, givenHumidity)', (a.strftime('%Y-%m-%d %H:%M:%S'));
+	if (data_type[0:1].lower() == "h"):
+		sql_command = 'INSERT INTO Humidity (datetime, humidity) VALUES (CURRENT_TIMESTAMP, ' + str(givenData) + ');'
 		cursor.execute(sql_command)
 
-	if (string[0:1].lower() == "c"):
-		sql_command = 'INSERT INTO CO2 (datetime, co2) VALUES (%s, givenCO2)', (a.strftime('%Y-%m-%d %H:%M:%S'));
+	if (data_type[0:1].lower() == "c"):
+		sql_command = 'INSERT INTO CO2 (datetime, co2) VALUES (CURRENT_TIMESTAMP, ' + str(givenData) + ');'
 		cursor.execute(sql_command)
 
-	if (string[0:1].lower() == "e"):
-		sql_command = 'INSERT INTO Energy (datetime, energy) VALUES (%s, givenEnergy)', (a.strftime('%Y-%m-%d %H:%M:%S'));
+	if (data_type[0:1].lower() == "e"):
+		sql_command = 'INSERT INTO Energy (datetime, energy) VALUES (CURRENT_TIMESTAMP, ' + str(givenData) + ');'
 		cursor.execute(sql_command)
 
 	# never forget this, if you want the changes to be saved:
 	connection.commit()
-"""
+
 
 
 
@@ -150,6 +91,9 @@ def queryDatabase(data_type):
 
 	if(data_type == "temperature"):
 		# sql_query_day = "SELECT AVG(CAST(temperature AS REAL)) FROM Temperature WHERE datetime >= datetime('now', '-1 days');"
+		sql_query_latest = "SELECT temperature FROM Temperature WHERE datetime = (SELECT MAX(datetime) FROM Temperature);"
+		cursor.execute(sql_query_latest)
+		temperature_latest = cursor.fetchall()
 		sql_query_day = "SELECT AVG(CAST(temperature AS REAL)) FROM Temperature WHERE datetime >= datetime('now', '-1 days');"
 		cursor.execute(sql_query_day)
 		temperature_day = cursor.fetchall()
@@ -159,9 +103,21 @@ def queryDatabase(data_type):
 		sql_query_month = "SELECT AVG(CAST(temperature AS REAL)) FROM Temperature WHERE datetime >= datetime('now', '-30 days');"
 		cursor.execute(sql_query_month)
 		temperature_month = cursor.fetchall()
-		query_total = "temperature:" + str(temperature_day) + ":" + str(temperature_week) + ":" + str(temperature_month)
+		query_total = "Temperature:" + str(temperature_latest) + ":" + str(temperature_day) + ":" + str(temperature_week) + ":" + str(temperature_month)
+
+		if str(temperature_latest) == 'None':
+			temperature_latest = '0'
+		if str(temperature_day) == 'None':
+			temperature_day = '0'
+		if str(temperature_week) == 'None':
+			temperature_week = '0'
+		if str(temperature_month) == 'None':
+			temperature_month = '0'
 
 	if(data_type == "humidity"):
+		sql_query_latest = "SELECT humidity FROM Humidity WHERE datetime = (SELECT MAX(datetime) FROM Humidity);"
+		cursor.execute(sql_query_latest)
+		humidity_latest = cursor.fetchall()
 		sql_query_day = "SELECT AVG(CAST(humidity AS REAL)) FROM Humidity WHERE datetime >= datetime('now', '-1 days');"
 		cursor.execute(sql_query_day)
 		humidity_day = cursor.fetchall()
@@ -171,32 +127,64 @@ def queryDatabase(data_type):
 		sql_query_month = "SELECT AVG(CAST(humidity AS REAL)) FROM Humidity WHERE datetime >= datetime('now', '-30 days');"
 		cursor.execute(sql_query_month)
 		humidity_month = cursor.fetchall()
-		query_total = "humidity:" + str(humidity_day) + ":" + str(humidity_week) + ":" + str(humidity_month)
+		query_total = "Humidity:" + str(humidity_latest) + ":"  + str(humidity_day) + ":" + str(humidity_week) + ":" + str(humidity_month)
+
+		if str(humidity_latest) == 'None':
+			humidity_latest = '0'
+		if str(humidity_day) == 'None':
+			humidity_day = '0'
+		if str(humidity_week) == 'None':
+			humidity_week = '0'
+		if str(humidity_month) == 'None':
+			humidity_month = '0'
 
 	if(data_type == "co2"):
-		sql_query_day = "SELECT AVG(CAST(CO2 AS REAL)) FROM CO2 WHERE datetime >= datetime('now', '-1 days');"
+		sql_query_latest = "SELECT co2 FROM CO2 WHERE datetime = (SELECT MAX(datetime) FROM CO2);"
+		cursor.execute(sql_query_latest)
+		co2_latest = cursor.fetchall()
+		sql_query_day = "SELECT AVG(CAST(co2 AS REAL)) FROM CO2 WHERE datetime >= datetime('now', '-1 days');"
 		cursor.execute(sql_query_day)
 		co2_day = cursor.fetchall()
-		sql_query_week = "SELECT AVG(CAST(CO2 AS REAL))FROM CO2 WHERE datetime >= datetime('now', '-6 days');"
+		sql_query_week = "SELECT AVG(CAST(co2 AS REAL))FROM CO2 WHERE datetime >= datetime('now', '-6 days');"
 		cursor.execute(sql_query_week)
 		co2_week = cursor.fetchall()
-		sql_query_month = "SELECT AVG(CAST(CO2 AS REAL)) FROM CO2 WHERE datetime >= datetime('now', '-30 days');"
+		sql_query_month = "SELECT AVG(CAST(co2 AS REAL)) FROM CO2 WHERE datetime >= datetime('now', '-30 days');"
 		cursor.execute(sql_query_month)
 		co2_month = cursor.fetchall()
-		query_total = "co2:" + str(co2_day) + ":" + str(co2_week) + ":" + str(co2_month)
+		query_total = "Co2:" + str(co2_latest) + ":"  + str(co2_day) + ":" + str(co2_week) + ":" + str(co2_month)
+
+		if str(co2_latest) == 'None':
+			co2_latest = '0'
+		if str(co2_day) == 'None':
+			co2_day = '0'
+		if str(co2_week) == 'None':
+			co2_week = '0'
+		if str(co2_month) == 'None':
+			co2_month = '0'
 
 	if(data_type == "energy"):
-		sql_query_day = "SELECT AVG(CAST(Energy AS REAL)) FROM Energy WHERE datetime >= datetime('now', '-1 days');"
+		sql_query_latest = "SELECT energy FROM Energy WHERE datetime = (SELECT MAX(datetime) FROM Energy);"
+		cursor.execute(sql_query_latest)
+		energy_latest = cursor.fetchall()
+		sql_query_day = "SELECT AVG(CAST(energy AS REAL)) FROM Energy WHERE datetime >= datetime('now', '-1 days');"
 		cursor.execute(sql_query_day)
 		energy_day = cursor.fetchall()
-		sql_query_week = "SELECT AVG(CAST(Energy AS REAL)) FROM Energy WHERE datetime >= datetime('now', '-6 days');"
+		sql_query_week = "SELECT AVG(CAST(energy AS REAL)) FROM Energy WHERE datetime >= datetime('now', '-6 days');"
 		cursor.execute(sql_query_week)
 		energy_week = cursor.fetchall()
-		sql_query_month = "SELECT AVG(CAST(Energy AS REAL)) FROM Energy WHERE datetime >= datetime('now', '-30 days');"
+		sql_query_month = "SELECT AVG(CAST(energy AS REAL)) FROM Energy WHERE datetime >= datetime('now', '-30 days');"
 		cursor.execute(sql_query_month)
 		energy_month = cursor.fetchall()
-		query_total = "energy:" + str(energy_day) + ":" + str(energy_week) + ":" + str(energy_month)
 
-	print(query_total)
+		if str(energy_latest) == 'None':
+			energy_latest = '0'
+		if str(energy_day) == 'None':
+			energy_day = '0'
+		if str(energy_week) == 'None':
+			energy_week = '0'
+		if str(energy_month) == 'None':
+			energy_month = '0'
+
+		query_total = "Energy:" + str(energy_latest) + ":"  + str(energy_day) + ":" + str(energy_week) + ":" + str(energy_month)
 	
 	return query_total
